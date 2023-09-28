@@ -12,6 +12,8 @@ export default {
   isDev: isDev(),
   isWindowsStore: isWindowsStore(),
   reloadProcess: () => ipcRenderer.send("reload-process"),
+
+  isWindowVisible: (): Promise<boolean> => ipcRenderer.invoke("windowVisible"),
 };
 
 function deviceType(): DeviceType {
