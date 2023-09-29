@@ -12,6 +12,12 @@ export default {
   isDev: isDev(),
   isWindowsStore: isWindowsStore(),
   reloadProcess: () => ipcRenderer.send("reload-process"),
+
+  storageService: <T>(
+    action: "get" | "has" | "save" | "remove",
+    key: string,
+    obj?: any
+  ): Promise<T> => ipcRenderer.invoke("storageService", { action, key, obj }),
 };
 
 function deviceType(): DeviceType {
