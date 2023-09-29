@@ -1,11 +1,9 @@
-import { clipboard, ipcRenderer, shell } from "electron";
-
 import { ClientType, DeviceType } from "@bitwarden/common/enums";
 import { I18nService } from "@bitwarden/common/platform/abstractions/i18n.service";
 import { MessagingService } from "@bitwarden/common/platform/abstractions/messaging.service";
 import { PlatformUtilsService } from "@bitwarden/common/platform/abstractions/platform-utils.service";
 
-import { BiometricMessage, BiometricStorageAction } from "../../types/biometric-message";
+import { BiometricStorageAction } from "../../types/biometric-message";
 import { isMacAppStore } from "../../utils";
 
 export class ElectronPlatformUtilsService implements PlatformUtilsService {
@@ -57,7 +55,7 @@ export class ElectronPlatformUtilsService implements PlatformUtilsService {
   }
 
   launchUri(uri: string, options?: any): void {
-    shell.openExternal(uri);
+    ipc.platform.launchUri(uri);
   }
 
   getApplicationVersion(): Promise<string> {
@@ -100,11 +98,14 @@ export class ElectronPlatformUtilsService implements PlatformUtilsService {
     return false;
   }
 
-  copyToClipboard(text: string, options?: any): void {
+  copyToClipboard(
+    text: string,
+    options?: { type?: "selection" | "clipboard"; clearing?: boolean; clearMs?: number }
+  ): void {
     const type = options ? options.type : null;
     const clearing = options ? !!options.clearing : false;
     const clearMs: number = options && options.clearMs ? options.clearMs : null;
-    clipboard.writeText(text, type);
+    ipc.platform.clipboardWrite(text, type);
     if (!clearing) {
       this.messagingService.send("copiedToClipboard", {
         clipboardValue: text,
@@ -117,13 +118,13 @@ export class ElectronPlatformUtilsService implements PlatformUtilsService {
 
   readFromClipboard(options?: any): Promise<string> {
     const type = options ? options.type : null;
-    return Promise.resolve(clipboard.readText(type));
+    return ipc.platform.clipboardRead(type);
   }
 
   async supportsBiometric(): Promise<boolean> {
-    return await ipcRenderer.invoke("biometric", {
+    return await ipc.platform.biometric({
       action: BiometricStorageAction.OsSupported,
-    } as BiometricMessage);
+    });
   }
 
   /** This method is used to authenticate the user presence _only_.
@@ -131,11 +132,9 @@ export class ElectronPlatformUtilsService implements PlatformUtilsService {
    * biometric keys, which has a separate authentication mechanism.
    * For biometric keys, invoke "keytar" with a biometric key suffix */
   async authenticateBiometric(): Promise<boolean> {
-    const val = await ipcRenderer.invoke("biometric", {
-      action: "authenticate",
+    return await ipc.platform.biometric({
+      action: BiometricStorageAction.Authenticate,
     });
-
-    return val;
   }
 
   supportsSecureStorage(): boolean {
